@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Environment & secrets
+.env
+*.env
+
+# Logs & cache
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Audio test files (keep repo clean, share separately)
+sample_audio/*.wav
+sample_audio/*.mp3
+sample_audio/*.m4a
+sample_audio/*.ogg
+sample_audio/*.webm
+
+# IDE files
+.vscode/
+.idea/
+*.iml
