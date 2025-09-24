@@ -1,3 +1,5 @@
+# app/main.py  (voice-agent)
+
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
@@ -5,14 +7,36 @@ from .stt_engine import transcribe_audio, is_allowed_mime
 from .config import MAX_UPLOAD_MB
 from .models import TranscriptionResult
 
+# -------------------------------------------------------
+# Original query-engine (kept for reference, now disabled)
+# -------------------------------------------------------
+# from .query_engine.processor import process_query  # <-- OLD in-process import (commented as requested)
 
-#Query_engine
+# Pydantic / typing (unchanged)
 from pydantic import BaseModel
 from typing import Optional, Any, Dict
-from .query_engine.processor import process_query
-from pydantic import BaseModel
-from typing import Optional, Any, Dict
 
+# -------------------------------------------------------
+# NEW: call external query-processor over HTTP
+# -------------------------------------------------------
+import os, requests
+from dotenv import load_dotenv
+
+load_dotenv()  # allow QP_URL / QP_KEY to be set in .env
+
+QP_URL = os.getenv("QP_URL", "http://localhost:8002/parse")
+QP_KEY = os.getenv("QP_KEY", "dev-key")
+
+def call_query_processor(text: str, user_id: Optional[str], locale: Optional[str]):
+    """
+    Send text to the standalone query-processor service and return its JSON.
+    """
+    payload = {"text": text, "user_id": user_id, "locale": (locale or "en-US")}
+    headers = {"x-api-key": QP_KEY, "Content-Type": "application/json"}
+    r = requests.post(QP_URL, json=payload, headers=headers, timeout=8)
+    r.raise_for_status()
+    return r.json()
+# -------------------------------------------------------
 
 
 app = FastAPI(
@@ -53,7 +77,7 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {
-        "message": "VoiceMart Voice Agent API", 
+        "message": "VoiceMart Voice Agent API",
         "docs": "/docs",
         "health": "/health",
         "stt_endpoint": "/v1/stt:transcribe"
@@ -80,13 +104,21 @@ async def stt_transcribe(file: UploadFile = File(...)):
         return JSONResponse(content=result.model_dump())
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Transcription failed: {str(e)}")
-    
+
 
 @app.post("/v1/query:process", response_model=QueryResponse)
 async def query_process(req: QueryRequest):
-    result = process_query(req.text, user_id=req.user_id, locale=req.locale)
-    return result
+    # ---------------------------
+    # OLD (kept, now disabled)
+    # ---------------------------
+    # result = process_query(req.text, user_id=req.user_id, locale=req.locale)
+    # return result
 
+    # ---------------------------
+    # NEW: delegate to query-processor service
+    # ---------------------------
+    qp = call_query_processor(req.text, req.user_id, req.locale)
+    return qp
 
 
 @app.post("/v1/voice:understand", response_model=VoiceUnderstandResponse)
@@ -109,8 +141,15 @@ async def voice_understand(
     stt_result = transcribe_audio(contents, detect_language=True)  # TranscriptionResult
     transcript_text = stt_result.text or ""
 
-    # --- Query processing ---
-    qp_dict = process_query(transcript_text, user_id=user_id, locale=locale)
+    # ---------------------------
+    # OLD (kept, now disabled)
+    # ---------------------------
+    # qp_dict = process_query(transcript_text, user_id=user_id, locale=locale)
+
+    # ---------------------------
+    # NEW: call external query-processor
+    # ---------------------------
+    qp_dict = call_query_processor(transcript_text, user_id, locale)
 
     # --- Return both ---
     return VoiceUnderstandResponse(
