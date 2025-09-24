@@ -1,0 +1,22 @@
+# Ignore Python venvs everywhere
+venv/
+*/venv/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore environment files
+.env
+*.env
+
+# Keep example envs
+!.env.example
+
+# IDE/system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
