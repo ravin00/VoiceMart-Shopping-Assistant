@@ -1,0 +1,10 @@
+# Product Finder API Keys
+# Copy this file to .env and add your API keys
+
+# eBay API (Optional - for eBay product search)
+EBAY_CLIENT_ID=your_ebay_client_id_here
+
+# Walmart API (Optional - for Walmart product search)  
+WALMART_API_KEY=your_walmart_api_key_here
+
+# Note: FakeStore API works without any keys (free)
