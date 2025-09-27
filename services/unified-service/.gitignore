@@ -1,4 +1,4 @@
-# Voice Agent .gitignore
+# Unified Service .gitignore
 
 # Python
 __pycache__/
@@ -55,7 +55,6 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
-*.iml
 
 # Logs
 *.log
@@ -67,16 +66,9 @@ pids
 *.seed
 *.pid.lock
 
-# Audio/Video test files (keep repo clean, share separately)
-sample_audio/*.wav
-sample_audio/*.mp3
-sample_audio/*.m4a
-sample_audio/*.ogg
-sample_audio/*.webm
-sample_audio/*.mp4
-sample_audio/*.avi
-sample_audio/*.mov
+# Audio/Video test files (keep repo clean)
 test_audio/
+sample_audio/
 *.wav
 *.mp3
 *.m4a
