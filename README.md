@@ -27,3 +27,5 @@ uvicorn app.main:app --reload --port 8001
 # Test in browser
 # Open: http://127.0.0.1:8001/docs
 # Try POST /v1/stt:transcribe → upload a short .wav or .mp3 file.
+
+![WhatsApp Image 2025-09-28 at 15 43 17](https://github.com/user-attachments/assets/d61e81d9-a6a6-4bb0-80b0-65c3e70d1696)
