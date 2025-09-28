@@ -32,7 +32,7 @@ System Diagram
 ![WhatsApp Image 2025-09-28 at 15 43 17](https://github.com/user-attachments/assets/d61e81d9-a6a6-4bb0-80b0-65c3e70d1696)
 
 Sequence Diagram
-![WhatsApp Image 2025-09-28 at 15 43 17](https://github.com/user-attachments/assets/bb778df8-ff6b-409f-a93d-01d3bb0648d3)
+![WhatsApp Image 2025-09-28 at 15 48 35](https://github.com/user-attachments/assets/ee76a1fa-7ef7-452c-b842-cad759d5987c)
 
 1. Pricing Plans (in LKR)
 Plan	Features	Price (LKR)
