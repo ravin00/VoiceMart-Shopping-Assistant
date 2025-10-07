@@ -39,7 +39,7 @@ def transcribe_audio(file_bytes: bytes, detect_language: bool = True) -> Transcr
     return TranscriptionResult(
         text=" ".join(full_text_parts).strip(),
         language=(info.language if detect_language else None),
-        duration_sec=duration,
+        duration=duration,
         segments=segs
     )
 

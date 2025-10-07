@@ -4,7 +4,7 @@ import requests
 import asyncio
 import aiohttp
 from typing import List, Dict, Any, Optional
-from .main import Product, ProductSearchRequest, ProductSearchResponse, ProductDetailsResponse
+from .models import Product, ProductSearchRequest, ProductSearchResponse, ProductDetailsResponse
 import os
 from dotenv import load_dotenv
 
@@ -248,6 +248,9 @@ async def search_products(request: ProductSearchRequest) -> ProductSearchRespons
             "brand": request.brand
         }
     )
+
+# Alias for compatibility with the main.py import
+search_products_unified = search_products
 
 async def get_product_details(product_id: str, source: str = "fakestore") -> ProductDetailsResponse:
     """Get detailed product information"""
