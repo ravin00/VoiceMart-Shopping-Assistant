@@ -25,38 +25,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic models
-class Product(BaseModel):
-    id: str
-    title: str
-    price: float
-    currency: str = "USD"
-    image_url: Optional[str] = None
-    description: Optional[str] = None
-    brand: Optional[str] = None
-    category: Optional[str] = None
-    rating: Optional[float] = None
-    availability: Optional[str] = None
-    url: Optional[str] = None
-    source: str  # Which API provided this product
-
-class ProductSearchRequest(BaseModel):
-    query: str
-    category: Optional[str] = None
-    min_price: Optional[float] = None
-    max_price: Optional[float] = None
-    brand: Optional[str] = None
-    limit: int = Field(default=10, ge=1, le=50)
-
-class ProductSearchResponse(BaseModel):
-    products: List[Product]
-    total_results: int
-    query: str
-    filters_applied: Dict[str, Any]
-
-class ProductDetailsResponse(BaseModel):
-    product: Product
-    additional_info: Optional[Dict[str, Any]] = None
+# Pydantic models (import from dedicated models module to avoid duplication)
+from .models import (
+    Product,
+    ProductSearchRequest,
+    ProductSearchResponse,
+    ProductDetailsResponse,
+)
 
 # Root endpoint
 @app.get("/")
@@ -89,12 +64,32 @@ async def search_products(request: ProductSearchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Product search failed: {str(e)}")
 
+# Alias without colon to avoid %3A encoding issues in some clients
+@app.post("/v1/products/search", response_model=ProductSearchResponse)
+async def search_products_alias(request: ProductSearchRequest):
+    try:
+        from .api_clients import search_products_unified
+        result = await search_products_unified(request)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Product search failed: {str(e)}")
+
 # Product details endpoint
 @app.get("/v1/products:details")
 async def get_product_details(product_id: str, source: str = "fakestore"):
     """
     Get detailed information about a specific product.
     """
+    try:
+        from .api_clients import get_product_details
+        result = await get_product_details(product_id, source)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get product details: {str(e)}")
+
+# Alias without colon
+@app.get("/v1/products/details")
+async def get_product_details_alias(product_id: str, source: str = "fakestore"):
     try:
         from .api_clients import get_product_details
         result = await get_product_details(product_id, source)
@@ -117,3 +112,26 @@ async def get_product_categories():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get categories: {str(e)}")
+
+# Alias without colon
+@app.get("/v1/products/categories")
+async def get_product_categories_alias():
+    try:
+        from .api_clients import get_categories
+        categories = await get_categories()
+        return {
+            "categories": categories,
+            "total": len(categories)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get categories: {str(e)}")
+
+
+
+
+
+
+
+
+
+
