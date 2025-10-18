@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import re
 import json
-from typing import Dict, Any, Optional, Tuple
-
+from typing import Dict, Any, Optional, Tuple, List
 from dotenv import load_dotenv
-load_dotenv()  # read QP_* vars from .env if present
+from datetime import datetime
+
+load_dotenv()
 
 # =========================================================
 # Feature flags (env)
@@ -14,9 +15,68 @@ load_dotenv()  # read QP_* vars from .env if present
 USE_SPACY = os.getenv("QP_USE_SPACY", "0") == "1"
 SPACY_MODEL = os.getenv("QP_SPACY_MODEL", "en_core_web_sm")
 
-USE_LLM = os.getenv("QP_USE_LLM", "0") == "1"
-LLM_MODEL_NAME = os.getenv("QP_LLM_MODEL", "google/flan-t5-small")
-LLM_MAX_NEW_TOKENS = int(os.getenv("QP_LLM_MAX_NEW_TOKENS", "128"))
+USE_LLM = True
+LLM_MODEL_NAME = os.getenv("QP_LLM_MODEL", "google/flan-t5-base")
+LLM_MAX_NEW_TOKENS = int(os.getenv("QP_LLM_MAX_NEW_TOKENS", "256"))
+
+print(f"[AGENT INIT] Query Processing Agent starting...")
+print(f"[AGENT INIT] LLM Enabled: {USE_LLM}")
+print(f"[AGENT INIT] LLM Model: {LLM_MODEL_NAME}")
+print(f"[AGENT INIT] Agent Mode: ACTIVE")
+
+# =========================================================
+# Agent Memory & Reasoning Tracker
+# =========================================================
+class AgentMemory:
+    """Tracks agent's reasoning process and decisions"""
+    def __init__(self):
+        self.reasoning_steps: List[str] = []
+        self.decisions: List[Dict[str, Any]] = []
+        self.observations: List[str] = []
+        self.timestamp = datetime.now().isoformat()
+    
+    def add_reasoning(self, step: str):
+        """Log a reasoning step"""
+        self.reasoning_steps.append(step)
+        print(f"[AGENT REASONING] {step}")
+    
+    def add_decision(self, decision: str, confidence: float, basis: str):
+        """Log an agent decision"""
+        self.decisions.append({
+            "decision": decision,
+            "confidence": confidence,
+            "basis": basis,
+            "timestamp": datetime.now().isoformat()
+        })
+        print(f"[AGENT DECISION] {decision} (confidence: {confidence:.2f}) - {basis}")
+    
+    def add_observation(self, observation: str):
+        """Log an observation from processing"""
+        self.observations.append(observation)
+        print(f"[AGENT OBSERVATION] {observation}")
+    
+    def get_trace(self) -> Dict[str, Any]:
+        """Get complete reasoning trace"""
+        return {
+            "reasoning_steps": self.reasoning_steps,
+            "decisions": self.decisions,
+            "observations": self.observations,
+            "agent_session": self.timestamp
+        }
+
+_current_memory: Optional[AgentMemory] = None
+
+def _get_memory() -> AgentMemory:
+    """Get or create agent memory for current processing"""
+    global _current_memory
+    if _current_memory is None:
+        _current_memory = AgentMemory()
+    return _current_memory
+
+def _reset_memory():
+    """Reset memory for new query"""
+    global _current_memory
+    _current_memory = AgentMemory()
 
 # =========================================================
 # Lazy spaCy load
@@ -24,7 +84,7 @@ LLM_MAX_NEW_TOKENS = int(os.getenv("QP_LLM_MAX_NEW_TOKENS", "128"))
 _nlp = None
 if USE_SPACY:
     try:
-        import spacy  # type: ignore
+        import spacy
         _nlp = spacy.load(SPACY_MODEL)
     except Exception:
         _nlp = None
@@ -44,12 +104,8 @@ def _get_llm():
     if _llm_pipe is not None:
         return _llm_pipe
     try:
-        from transformers import pipeline  # type: ignore
-        _llm_pipe = pipeline(
-            "text2text-generation",
-            model=LLM_MODEL_NAME,
-            device=-1,  # CPU
-        )
+        from transformers import pipeline
+        _llm_pipe = pipeline("text2text-generation", model=LLM_MODEL_NAME, device=-1)
         return _llm_pipe
     except Exception as e:
         _llm_error = f"LLM init failed: {e}"
@@ -74,15 +130,15 @@ WORD_NUM = {
     "dozen": 12, "pair": 2, "pairs": 2,
 }
 
-UOMS   = r"(packs?|packets?|pieces?|pcs?|bottles?|units?|cans?|bags?|boxes?|kg|g|lb|lbs|ml|l|liters?|litres?)"
+UOMS = r"(packs?|packets?|pieces?|pcs?|bottles?|units?|cans?|bags?|boxes?|kg|g|lb|lbs|ml|l|liters?|litres?)"
 COLORS = r"(black|white|red|blue|green|yellow|pink|purple|silver|gold|gray|grey|brown|beige|navy|orange)"
-SIZES  = r"(xxs|xs|s|m|l|xl|xxl|xxxl|small|medium|large|\d+[x×]\d+|\d+(\.\d+)?(cm|mm|in|inch|inches))"
+SIZES = r"(xxs|xs|s|m|l|xl|xxl|xxxl|small|medium|large|\d+[x×]\d+|\d+(\.\d+)?(cm|mm|in|inch|inches))"
 BRANDS = r"(nike|adidas|puma|reebok|samsung|apple|sony|dell|hp|lenovo|milo|nestle|coke|pepsi|asus|acer|msi)"
 
 CATEGORY_KEYWORDS = {
-    "shoes":   ["shoe", "shoes", "sneaker", "sneakers", "heels", "sandals", "boots"],
+    "shoes": ["shoe", "shoes", "sneaker", "sneakers", "heels", "sandals", "boots"],
     "laptops": ["laptop", "notebook", "macbook", "chromebook"],
-    "phones":  ["phone", "smartphone", "iphone", "android"],
+    "phones": ["phone", "smartphone", "iphone", "android"],
     "tshirts": ["t-shirt", "t shirt", "tee", "tees"],
     "beverages": ["milo", "coke", "pepsi", "coffee", "tea", "juice", "soda"],
 }
@@ -95,65 +151,57 @@ TERM_FIXES = {
 
 CURRENCY_SYMBOLS = r"[\$£€]|Rs\.?|LKR|USD|EUR|GBP|rs|lkr|usd|eur|gbp"
 CURRENCY_WORDS = {
-    "dollar":"USD","dollars":"USD","$":"USD","usd":"USD",
-    "rupee":"LKR","rupees":"LKR","rs":"LKR","lkr":"LKR",
-    "euro":"EUR","euros":"EUR","€":"EUR","eur":"EUR",
-    "gbp":"GBP","pound":"GBP","pounds":"GBP","£":"GBP",
+    "dollar": "USD", "dollars": "USD", "$": "USD", "usd": "USD",
+    "rupee": "LKR", "rupees": "LKR", "rs": "LKR", "lkr": "LKR",
+    "euro": "EUR", "euros": "EUR", "€": "EUR", "eur": "EUR",
+    "gbp": "GBP", "pound": "GBP", "pounds": "GBP", "£": "GBP",
 }
-CURRENCY_SYMBOL_FOR = {"USD":"$", "LKR":"Rs", "EUR":"€", "GBP":"£"}
+CURRENCY_SYMBOL_FOR = {"USD": "$", "LKR": "Rs", "EUR": "€", "GBP": "£"}
+
+# =========================================================
+# Intent patterns - IMPROVED V2
+# =========================================================
+INTENT_PATTERNS = {
+    "greeting": re.compile(r"^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening))\b", re.I),
+    
+    "search_product": re.compile(
+        rf"(?:find|search|show|looking\s*for|need|want|get)\s+(?:me\s+)?(?P<product>[\w\s]+?)(?:\s+(?P<brand>{BRANDS}))?(?:\s+between|under|over|from|and|\s*$)",
+        re.I
+    ),
+    
+    "add_to_cart": re.compile(
+        rf"(?:add|put|place)\s+(?P<qty_num>\d+|\w+)?\s*(?P<uom>{UOMS})?\s*(?:of\s+)?(?P<product>[\w\s]+?)(?=\s+to\s+(?:my\s*)?(?:cart|basket))",
+        re.I
+    ),
+    
+    "remove_from_cart": re.compile(
+        r"(?:remove|delete|take\s*out)\s+(?P<product>[\w\s]+?)\s*(?:from\s*(?:my\s*)?(?:cart|basket))",
+        re.I
+    ),
+    
+    "show_cart": re.compile(r"(?:show|view|display|what'?s?\s*in)\s*(?:my\s*)?(?:cart|basket)", re.I),
+    
+    "checkout": re.compile(r"(?:checkout|proceed\s*to\s*checkout|place\s*order|buy\s*now)", re.I),
+}
 
 # =========================================================
 # Regex extractors
-#   NOTE: allow k/m suffix via (?:[km])? and decimals via [\d,.]+
 # =========================================================
 COLOR_RE = re.compile(rf"\b{COLORS}\b", re.I)
-SIZE_RE  = re.compile(rf"\b{SIZES}\b", re.I)
+SIZE_RE = re.compile(rf"\b{SIZES}\b", re.I)
 BRAND_RE = re.compile(rf"\b{BRANDS}\b", re.I)
-
 PRICE_UNDER_RE = re.compile(
-    rf"(?:under|below|less\s*than)\s*(?P<cur>{CURRENCY_SYMBOLS})?\s*(?P<val>[\d,.]+(?:[km])?)",
-    re.I,
+    rf"(?:under|below|less\s*than)\s*(?P<cur>{CURRENCY_SYMBOLS})?\s*(?P<val>[\d,.]+(?:[km])?)", re.I
 )
-PRICE_OVER_RE  = re.compile(
-    rf"(?:over|above|more\s*than|at\s*least)\s*(?P<cur>{CURRENCY_SYMBOLS})?\s*(?P<val>[\d,.]+(?:[km])?)",
-    re.I,
+PRICE_OVER_RE = re.compile(
+    rf"(?:over|above|more\s*than|at\s*least)\s*(?P<cur>{CURRENCY_SYMBOLS})?\s*(?P<val>[\d,.]+(?:[km])?)", re.I
 )
 PRICE_BETWEEN_RE = re.compile(
-    rf"(?:between|from)\s*(?P<cur1>{CURRENCY_SYMBOLS})?\s*(?P<min>[\d,.]+(?:[km])?)\s*(?:and|to|-)\s*(?P<cur2>{CURRENCY_SYMBOLS})?\s*(?P<max>[\d,.]+(?:[km])?)",
-    re.I,
+    rf"(?:between|from)\s*(?P<cur1>{CURRENCY_SYMBOLS})?\s*(?P<min>[\d,.]+(?:[km])?)\s*(?:and|to|-)\s*(?P<cur2>{CURRENCY_SYMBOLS})?\s*(?P<max>[\d,.]+(?:[km])?)", re.I
 )
-
 PRICE_PHRASE_RE = re.compile(
-    r"\s*(?:under|below|less\s*than|over|above|more\s*than|at\s*least|between|from)\b.*$",
-    re.I,
+    r"\s*(?:under|below|less\s*than|over|above|more\s*than|at\s*least|between|from)\b.*$", re.I
 )
-
-# =========================================================
-# Intent patterns
-# =========================================================
-INTENT_PATTERNS: Dict[str, re.Pattern] = {
-    "add_to_cart": re.compile(
-        rf"\b(add|buy|put)\b\s+(?P<qty_num>\d+|{'|'.join(WORD_NUM.keys())})?\s*(?P<uom>{UOMS})?\s*(?:of\s+)?(?P<product>.+?)"
-        rf"(?:\s+(?P<size>{SIZES}))?(?:\s+(?P<color>{COLORS}))?(?:\s+(?:from|by)\s+(?P<brand>{BRANDS}))?"
-        rf"(?:\s+(?:under|below|less\s*than)\s*(?P<cur1>{CURRENCY_SYMBOLS})?\s*(?P<price_max>[\d,.]+(?:[km])?))?"
-        rf"(?:\s+(?:over|above|more\s*than|at\s*least)\s*(?P<cur2>{CURRENCY_SYMBOLS})?\s*(?P<price_min>[\d,.]+(?:[km])?))?\s*$",
-        re.I,
-    ),
-    "remove_from_cart": re.compile(
-        rf"\b(remove|delete|take\s*out)\b\s+(?P<product>.+?)"
-        rf"(?:\s+(?P<size>{SIZES}))?(?:\s+(?P<color>{COLORS}))?(?:\s+(?:from|by)\s+(?P<brand>{BRANDS}))?\s*$",
-        re.I,
-    ),
-    "search_product": re.compile(
-        rf"\b(find|search|show|look\s*for)\b\s+(?:me\s+|some\s+)?(?P<product>.+?)\s*"
-        rf"(?:(?:under|below|less\s*than)\s*(?P<cur1>{CURRENCY_SYMBOLS})?\s*(?P<price_max>[\d,.]+(?:[km])?))?\s*"
-        rf"(?:(?:over|above|more\s*than|at\s*least)\s*(?P<cur2>{CURRENCY_SYMBOLS})?\s*(?P<price_min>[\d,.]+(?:[km])?))?\s*$",
-        re.I,
-    ),
-    "show_cart": re.compile(r"\b(show|view|see|what'?s|whats)\b.*\bcart\b", re.I),
-    "checkout": re.compile(r"\b(checkout|place\s+order|pay)\b", re.I),
-    "greeting": re.compile(r"\b(hi|hello|hey)\b", re.I),
-}
 
 # =========================================================
 # Helpers
@@ -163,18 +211,11 @@ def _fix_terms(text: str) -> str:
         text = re.sub(pat, repl, text, flags=re.I)
     return text
 
-def _to_int(s: Optional[str]) -> Optional[int]:
-    if not s: return None
-    s = s.strip().lower()
-    if s.isdigit(): return int(s)
-    return WORD_NUM.get(s)
-
 def _to_float(s: Optional[str]) -> Optional[float]:
     if not s:
         return None
     s = s.strip().lower().replace(",", "")
     try:
-        # Handle "k" and "m" shorthand (e.g., 200k = 200000; 1.5m = 1_500_000)
         if s.endswith("k"):
             return float(s[:-1]) * 1000
         if s.endswith("m"):
@@ -183,121 +224,132 @@ def _to_float(s: Optional[str]) -> Optional[float]:
     except Exception:
         return None
 
-def _clean(s: Optional[str]) -> Optional[str]:
-    if not s: return s
-    return re.sub(r"\s+", " ", s).strip().rstrip(".,!?")
+def _to_int(s: Optional[str]) -> Optional[int]:
+    if not s:
+        return None
+    s = s.strip().lower()
+    if s in WORD_NUM:
+        return WORD_NUM[s]
+    try:
+        return int(s)
+    except Exception:
+        return None
 
-def _normalize_product(p: Optional[str]) -> Optional[str]:
-    if not p: return p
-    p = _clean(p)
-    p = re.sub(r"^\bme\b\s+", "", p, flags=re.I)
-    p = re.sub(rf"^(?:{UOMS})\s+of\s+", "", p, flags=re.I)
-    return p
+def _normalize_product(text: str) -> str:
+    """Strip extra words and normalize product name."""
+    text = re.sub(r"\b(find|search|show|get|need|want|looking\s+for)\b", "", text, flags=re.I)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
-def _strip_price_phrases(p: str) -> str:
-    p = PRICE_PHRASE_RE.sub("", p)
-    return p.strip()
+def _strip_price_phrases(text: str) -> str:
+    """Remove price-related phrases from product name."""
+    return PRICE_PHRASE_RE.sub("", text).strip()
 
-def _infer_category(product: Optional[str]) -> Optional[str]:
-    if not product: return None
-    pl = product.lower()
-    for cat, words in CATEGORY_KEYWORDS.items():
-        for w in words:
-            if w in pl: return cat
+def _currency_code(cur_str: str) -> Optional[str]:
+    """Convert currency string/symbol to standard code."""
+    cur_str = cur_str.strip().lower()
+    return CURRENCY_WORDS.get(cur_str)
+
+def _infer_category(product: str) -> Optional[str]:
+    """Infer category from product name."""
+    product_lower = product.lower()
+    for cat, keywords in CATEGORY_KEYWORDS.items():
+        for kw in keywords:
+            if kw in product_lower:
+                return cat
     return None
 
-def _detect(text: str) -> Tuple[str, Optional[re.Match]]:
-    for intent, pat in INTENT_PATTERNS.items():
-        m = pat.search(text)
-        if m: return intent, m
-    return "unknown", None
-
-def _currency_code(tok: Optional[str]) -> Optional[str]:
-    if not tok: return None
-    t = tok.strip().lower().replace(".", "")
-    return CURRENCY_WORDS.get(t) or CURRENCY_WORDS.get(t.upper()) or None
-
-# =========================================================
-# spaCy NER enrichment
-# =========================================================
 def _ner_pass(text: str, slots: Dict[str, Any]) -> None:
-    if not (USE_SPACY and _nlp): return
+    """Use spaCy NER to enrich slots if available."""
+    if not _nlp:
+        return
     try:
         doc = _nlp(text)
         for ent in doc.ents:
-            label = ent.label_.lower()
-            val = ent.text.strip()
-            if label in ("org", "product", "brand"):
-                if "brand" not in slots:
-                    slots["brand"] = val.lower()
-            elif label == "money":
-                amt = re.findall(r"[\d,]+(?:\.\d+)?", val)
-                if amt:
-                    v = _to_float(amt[0])
-                    if v is not None:
-                        slots.setdefault("price_seen", v)
+            if ent.label_ == "PRODUCT" and "product" not in slots:
+                slots["product"] = ent.text.strip()
+            elif ent.label_ == "ORG" and "brand" not in slots:
+                slots["brand"] = ent.text.strip()
+            elif ent.label_ == "MONEY":
+                val = _to_float(re.sub(r"[^\d.,km]", "", ent.text, flags=re.I))
+                if val and "price_max" not in slots:
+                    slots["price_max"] = val
     except Exception:
         pass
 
 # =========================================================
-# LLM Clarifier with JSON repair
+# LLM Clarifier
 # =========================================================
 def _clarify_with_llm(text: str) -> Dict[str, Any]:
     pipe = _get_llm()
     if pipe is None:
         return {}
 
-    prompt = f"""
-You are a JSON generator for e-commerce queries.
-Read the user query and output ONLY valid JSON with the following fields:
-intent, product, brand, category, price_min, price_max, currency.
-Do not include any explanations or other text. 
-Intent must be one of: search_product, add_to_cart, remove_from_cart, show_cart, checkout, greeting.
-If any field is not applicable, OMIT it.
+    prompt = f"""Extract e-commerce query information and return ONLY valid JSON.
 
-### EXAMPLE ###
-User query: "I want a Dell laptop under 120k LKR"
-JSON:
-{{"intent":"search_product","product":"laptop","brand":"dell","price_max":120000,"currency":"LKR"}}
+Required fields:
+- intent: one of [search_product, add_to_cart, remove_from_cart, show_cart, checkout, greeting, unknown]
+- product: the main product name (e.g., "gaming laptop", "shoes", "milo")
+- brand: brand name if mentioned (e.g., "asus", "nike")
+- category: product category if clear (e.g., "laptops", "shoes", "beverages")
+- price_min: minimum price as number (extract from "over", "above", "at least")
+- price_max: maximum price as number (extract from "under", "below", "budget", "around")
+- currency: currency code (LKR, USD, EUR, GBP)
 
-### INPUT ###
-User query: "{text}"
-JSON:
-""".strip()
+Examples:
+Input: "I need a gaming laptop maybe Asus, budget around 300k"
+Output: {{"intent":"search_product","product":"gaming laptop","brand":"asus","price_max":300000,"currency":"LKR"}}
+
+Input: "find nike shoes under $100"
+Output: {{"intent":"search_product","product":"shoes","brand":"nike","price_max":100,"currency":"USD"}}
+
+Input: "add 2 packs of milo"
+Output: {{"intent":"add_to_cart","product":"milo","quantity":2}}
+
+Now process this query and return ONLY the JSON object, no other text:
+Query: {text}
+JSON:"""
 
     try:
-        out = pipe(prompt, max_new_tokens=LLM_MAX_NEW_TOKENS)[0]["generated_text"]
-        print("[LLM] Clarifier triggered for:", text)
-        print("[LLM] Raw model output:", out)
+        response = pipe(prompt, max_new_tokens=LLM_MAX_NEW_TOKENS)[0]["generated_text"]
+        print(f"[LLM] Clarifier triggered for: {text}")
+        print(f"[LLM] Raw model output: {response}")
 
-        cleaned = out.strip()
+        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(0)
+        else:
+            json_str = response.strip()
+            if not json_str.startswith('{'):
+                json_str = '{' + json_str + '}'
 
-        # 1) Wrap with braces if missing
-        if not cleaned.startswith("{") and re.match(r'^"[^"]+":', cleaned):
-            cleaned = "{" + cleaned + "}"
+        json_str = re.sub(r'(\w+):', r'"\1":', json_str)
+        json_str = re.sub(r':"(\d+)"', r':\1', json_str)
+        json_str = re.sub(r',\s*}', '}', json_str)
+        json_str = re.sub(r',\s*]', ']', json_str)
+        
+        print(f"[LLM] Cleaned JSON candidate: {json_str}")
 
-        # 2) Fix duplicated intent separators
-        cleaned = re.sub(r'""intent"', '","intent"', cleaned)
+        result = json.loads(json_str)
 
-        # 3) Fix stray quotes before numbers or commas
-        cleaned = re.sub(r'":(\d+)"', r'":\1', cleaned)
+        for key in ["price_min", "price_max"]:
+            if key in result and isinstance(result[key], str):
+                val_str = str(result[key]).lower().replace(",", "")
+                if val_str.endswith("k"):
+                    result[key] = float(val_str[:-1]) * 1000
+                else:
+                    result[key] = float(val_str)
 
-        # 4) Remove any extra quotes before commas
-        cleaned = re.sub(r'"\s*,', '",', cleaned)
+        if result.get("intent"):
+            info = f"[LLM OK] Parsed: {result.get('intent')} | Product: {result.get('product')} | Brand: {result.get('brand')} | Price: {result.get('price_max')}"
+            print(info)
 
-        # 5) Strip trailing commas / spaces
-        cleaned = cleaned.strip().rstrip(",")
+        return result
 
-        # 6) If still no leading '{', try extracting JSON block
-        if not cleaned.startswith("{"):
-            m = re.search(r"\{.*\}", cleaned, re.S)
-            if m:
-                cleaned = m.group(0)
-
-        print("[LLM] Cleaned JSON candidate:", cleaned)
-        return json.loads(cleaned)
     except Exception as e:
         print(f"[LLM clarifier failed] {e}")
+        import traceback
+        traceback.print_exc()
         return {}
 
 def _validate_structured(d: Dict[str, Any]) -> Dict[str, Any]:
@@ -321,6 +373,17 @@ def _validate_structured(d: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 # =========================================================
+# Intent detection helper
+# =========================================================
+def _detect(text: str) -> Tuple[str, Optional[re.Match]]:
+    """Detect user intent from text using regex patterns."""
+    for intent, pat in INTENT_PATTERNS.items():
+        m = pat.search(text)
+        if m:
+            return intent, m
+    return "unknown", None
+
+# =========================================================
 # Public entry point
 # =========================================================
 def process_query(
@@ -328,24 +391,58 @@ def process_query(
     user_id: Optional[str] = None,
     locale: Optional[str] = "en-US",
 ) -> Dict[str, Any]:
-    # 1) sanitize + normalize
+    """
+    INTELLIGENT AGENT: Query Processing with Reasoning
+    
+    Agent Capabilities:
+    1. Perceives: Receives and sanitizes natural language input
+    2. Reasons: Uses LLM to understand intent and entities
+    3. Decides: Determines best extraction strategy
+    4. Acts: Structures data for downstream services
+    5. Evaluates: Calculates confidence and adjusts behavior
+    """
+    
+    _reset_memory()
+    memory = _get_memory()
+    
+    print(f"\n{'='*60}")
+    print(f"[AGENT START] Processing query: '{text}'")
+    print(f"[AGENT START] User: {user_id or 'anonymous'}")
+    print(f"{'='*60}\n")
+    
+    memory.add_reasoning("Step 1: Perceiving input - sanitizing and normalizing text")
     text = _sanitize(text)
     text = _fix_terms(text)
-
-    # 2) detect intent via regex
+    memory.add_observation(f"Cleaned text: '{text}'")
+    
+    memory.add_reasoning("Step 2: Initial analysis - detecting intent patterns")
     intent, m = _detect(text)
+    memory.add_observation(f"Pattern matching found: intent='{intent}'")
+    
     slots: Dict[str, Any] = {"raw": text}
 
-    # 3) global attribute sniffs
-    if (c := COLOR_RE.search(text)): slots["color"] = c.group(1).lower()
-    if (s := SIZE_RE.search(text)):  slots["size"]  = s.group(1).lower()
-    if (b := BRAND_RE.search(text)): slots["brand"] = b.group(1).lower()
+    memory.add_reasoning("Step 3: Entity extraction - identifying attributes from text")
+    
+    if (c := COLOR_RE.search(text)): 
+        slots["color"] = c.group(1).lower()
+        memory.add_observation(f"Extracted color: {slots['color']}")
+    if (s := SIZE_RE.search(text)):  
+        slots["size"]  = s.group(1).lower()
+        memory.add_observation(f"Extracted size: {slots['size']}")
+    if (b := BRAND_RE.search(text)): 
+        slots["brand"] = b.group(1).lower()
+        memory.add_observation(f"Extracted brand: {slots['brand']}")
 
-    # 4) price phrases anywhere
+    memory.add_reasoning("Step 4: Price analysis - detecting budget constraints")
+    
     if (rng := PRICE_BETWEEN_RE.search(text)):
         mn, mx = _to_float(rng.group("min")), _to_float(rng.group("max"))
-        if mn is not None: slots["price_min"] = mn
-        if mx is not None: slots["price_max"] = mx
+        if mn is not None: 
+            slots["price_min"] = mn
+            memory.add_observation(f"Extracted min price: {mn}")
+        if mx is not None: 
+            slots["price_max"] = mx
+            memory.add_observation(f"Extracted max price: {mx}")
         if (rng.group("cur1") or rng.group("cur2")):
             slots["currency"] = (rng.group("cur1") or rng.group("cur2"))
 
@@ -353,20 +450,23 @@ def process_query(
         val = _to_float(mxm.group("val"))
         if val is not None:
             slots["price_max"] = val
+            memory.add_observation(f"Extracted max price: {val}")
             if mxm.group("cur"): slots["currency"] = mxm.group("cur")
 
     if (mnp := PRICE_OVER_RE.search(text)) and "price_min" not in slots:
         val = _to_float(mnp.group("val"))
         if val is not None:
             slots["price_min"] = val
+            memory.add_observation(f"Extracted min price: {val}")
             if mnp.group("cur"): slots["currency"] = mnp.group("cur")
 
-    # 5) intent-specific fields
     if m:
+        memory.add_reasoning("Step 5: Intent-specific processing - extracting context")
         gd = m.groupdict() or {}
         if intent == "add_to_cart":
             if (q := _to_int(gd.get("qty_num"))) is not None:
                 slots["qty"] = q
+                memory.add_observation(f"Quantity: {q}")
             if gd.get("uom"):
                 slots["uom"] = gd["uom"].lower()
 
@@ -385,34 +485,45 @@ def process_query(
             p = _normalize_product(p)
             p = _strip_price_phrases(p)
             slots["product"] = p
+            memory.add_observation(f"Product identified: {p}")
 
-    # 6) NER enrichment
+    memory.add_reasoning("Step 6: NER enrichment - using spaCy for entity recognition")
     _ner_pass(text, slots)
 
-    # 7) infer category
     if "product" in slots:
+        memory.add_reasoning("Step 7: Category inference - mapping product to category")
         if (cat := _infer_category(slots["product"])):
             slots["category"] = cat
+            memory.add_observation(f"Inferred category: {cat}")
 
-    # 8) currency polish
     if "currency" in slots:
+        memory.add_reasoning("Step 8: Currency normalization - standardizing currency format")
         code = _currency_code(slots["currency"])
         if code:
             slots["currency"] = CURRENCY_SYMBOL_FOR.get(code, slots["currency"])
+            memory.add_observation(f"Normalized currency: {slots['currency']}")
 
-    # 9) convenience: price_limit = price_max
     if "price_max" in slots and "price_min" not in slots:
         slots["price_limit"] = slots["price_max"]
 
-    # 10) LLM clarifier
     llm_used = False
     clarified: Dict[str, Any] = {}
-    if USE_LLM and (os.getenv("QP_LLM_ALWAYS") == "1" or intent == "unknown" or "product" not in slots):
+    
+    memory.add_reasoning("Step 10: LLM Agent activation - applying language model intelligence")
+    memory.add_decision(
+        "Activating LLM for deep understanding",
+        confidence=0.9,
+        basis="Agent mode enabled for all queries"
+    )
+    
+    if USE_LLM:
+        print(f"[AGENT LLM] Triggering language model for: {text}")
         clarified = _validate_structured(_clarify_with_llm(text))
         if clarified:
             llm_used = True
+            memory.add_observation(f"LLM extracted: {list(clarified.keys())}")
+            print(f"[AGENT LLM] Successfully extracted: {clarified}")
 
-            # Normalize LLM intent synonyms
             intent_map = {
                 "buy": "search_product",
                 "purchase": "search_product",
@@ -424,10 +535,18 @@ def process_query(
                 clarified["intent"] = normalized_intent
                 if intent == "unknown":
                     intent = normalized_intent
+                    memory.add_decision(
+                        f"Intent resolved to: {intent}",
+                        confidence=0.8,
+                        basis="LLM understanding"
+                    )
 
             for k in ("product", "brand", "category", "price_min", "price_max", "currency"):
-                if k in clarified and k not in slots:
+                if k in clarified:
+                    old_val = slots.get(k)
                     slots[k] = clarified[k]
+                    if old_val != clarified[k]:
+                        memory.add_observation(f"LLM corrected {k}: {old_val} → {clarified[k]}")
 
             if "currency" in slots:
                 code = _currency_code(slots["currency"])
@@ -439,7 +558,8 @@ def process_query(
                 if cat:
                     slots["category"] = cat
 
-    # Debug breadcrumbs
+    memory.add_reasoning("Step 11: Confidence evaluation - assessing understanding quality")
+    
     if llm_used:
         slots["__llm_used"] = True
         slots["__llm_model"] = LLM_MODEL_NAME
@@ -447,22 +567,26 @@ def process_query(
     elif USE_LLM and _llm_error:
         slots["__llm_error"] = _llm_error
 
-    # 10.5) Cosmetic: clean price_min == price_max to avoid awkward reply text
     if "price_min" in slots and "price_max" in slots and slots["price_min"] == slots["price_max"]:
-        # keep only max for "under X" phrasing (feel free to flip if you prefer)
         slots.pop("price_min")
 
-    # 11) reply + confidence
+    memory.add_reasoning("Step 12: Response generation - creating user-friendly reply")
+    
     if intent == "greeting":
         reply = "Hi! Try: 'find Nike shoes under $100', 'add 2 packs of Milo', 'show cart', or 'checkout'."
     elif intent == "search_product":
         p = slots.get("product", "the item")
         bits = []
-        if "brand" in slots: bits.append(slots["brand"])
-        if "color" in slots: bits.append(slots["color"])
-        if "size" in slots:  bits.append(slots["size"])
-        if "price_min" in slots: bits.append(f"over {slots.get('currency', '$')}{slots['price_min']}")
-        if "price_max" in slots: bits.append(f"under {slots.get('currency', '$')}{slots['price_max']}")
+        if "brand" in slots: 
+            bits.append(slots["brand"])
+        if "color" in slots: 
+            bits.append(slots["color"])
+        if "size" in slots:  
+            bits.append(slots["size"])
+        if "price_min" in slots: 
+            bits.append(f"over {slots.get('currency', '$')}{slots['price_min']}")
+        if "price_max" in slots: 
+            bits.append(f"under {slots.get('currency', '$')}{slots['price_max']}")
         suffix = f" ({', '.join(bits)})" if bits else ""
         reply = f"Searching for {p}{suffix}…"
     elif intent == "add_to_cart":
@@ -473,17 +597,35 @@ def process_query(
     elif intent == "remove_from_cart":
         reply = f"Removing {slots.get('product','that item')} from your cart…"
     elif intent == "show_cart":
-        reply = "Here’s what’s in your cart…"
+        reply = "Here's what's in your cart…"
     elif intent == "checkout":
         reply = "Proceeding to checkout…"
     else:
-        reply = "Sorry, I didn’t understand that."
+        reply = "Sorry, I didn't understand that."
+        memory.add_decision(
+            "Requesting clarification",
+            confidence=0.3,
+            basis="Unable to determine clear intent"
+        )
 
     confidence = 0.9 if intent in {
         "add_to_cart","remove_from_cart","search_product","show_cart","checkout","greeting"
     } else 0.3
     if llm_used and confidence < 0.8:
         confidence = 0.8
+    
+    memory.add_decision(
+        f"Final confidence: {confidence}",
+        confidence=confidence,
+        basis=f"{'LLM-enhanced' if llm_used else 'Pattern-based'} extraction with {len(slots)} entities"
+    )
+    
+    agent_trace = memory.get_trace()
+    
+    print(f"\n[AGENT COMPLETE] Processed successfully")
+    print(f"[AGENT COMPLETE] Intent: {intent} | Confidence: {confidence}")
+    print(f"[AGENT COMPLETE] Entities extracted: {len(slots)}")
+    print(f"{'='*60}\n")
 
     return {
         "intent": intent,
@@ -493,4 +635,15 @@ def process_query(
         "action": {"type": intent, "params": slots},
         "user_id": user_id,
         "locale": locale or "en-US",
+        
+        "agent_metadata": {
+            "is_agent": True,
+            "agent_type": "query_understanding_agent",
+            "reasoning_trace": agent_trace["reasoning_steps"],
+            "decisions_made": agent_trace["decisions"],
+            "observations": agent_trace["observations"],
+            "processing_timestamp": agent_trace["agent_session"],
+            "llm_powered": llm_used,
+            "model": LLM_MODEL_NAME if llm_used else "rule-based"
+        }
     }
