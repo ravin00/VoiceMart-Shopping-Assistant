@@ -7,7 +7,10 @@ Run this to test all functionality quickly.
 import requests
 import json
 
-BASE_URL = "http://localhost:8003"
+# Set base URL
+# Use port 8000 for web scraper testing
+# Use port 8003 for original API testing
+BASE_URL = "http://localhost:8000"  # Change to 8003 to test the original API
 
 def test_health():
     """Test health endpoint"""

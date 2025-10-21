@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import requests
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -58,20 +59,28 @@ async def search_products(request: ProductSearchRequest):
     Search for products across multiple APIs.
     """
     try:
+        logger = logging.getLogger("api")
+        logger.info(f"Received search request: {request.dict()}")
         from .api_clients import search_products_unified
         result = await search_products_unified(request)
+        logger.info(f"Search returned {len(result.products)} products")
         return result
     except Exception as e:
+        logger.error(f"Product search failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Product search failed: {str(e)}")
 
 # Alias without colon to avoid %3A encoding issues in some clients
 @app.post("/v1/products/search", response_model=ProductSearchResponse)
 async def search_products_alias(request: ProductSearchRequest):
     try:
+        logger = logging.getLogger("api")
+        logger.info(f"Received search request at alias endpoint: {request.dict()}")
         from .api_clients import search_products_unified
         result = await search_products_unified(request)
+        logger.info(f"Search returned {len(result.products)} products")
         return result
     except Exception as e:
+        logger.error(f"Product search failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Product search failed: {str(e)}")
 
 # Product details endpoint

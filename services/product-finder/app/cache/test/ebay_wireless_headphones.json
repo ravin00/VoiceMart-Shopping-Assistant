@@ -1,0 +1,52 @@
+{
+  "query": "wireless headphones",
+  "products": [
+    {
+      "title": "Ebay Wireless Headphones - Model 1",
+      "price": 428.2,
+      "image": "https://placehold.co/400x400?text=ebay+1",
+      "url": "https://www.ebay.com/search?q=wireless+headphones",
+      "description": "Sample wireless headphones product from ebay",
+      "source": "ebay",
+      "category": "wireless headphones"
+    },
+    {
+      "title": "Ebay Wireless Headphones - Model 2",
+      "price": 352.3,
+      "image": "https://placehold.co/400x400?text=ebay+2",
+      "url": "https://www.ebay.com/search?q=wireless+headphones",
+      "description": "Sample wireless headphones product from ebay",
+      "source": "ebay",
+      "category": "wireless headphones"
+    },
+    {
+      "title": "Ebay Wireless Headphones - Model 3",
+      "price": 71.66,
+      "image": "https://placehold.co/400x400?text=ebay+3",
+      "url": "https://www.ebay.com/search?q=wireless+headphones",
+      "description": "Sample wireless headphones product from ebay",
+      "source": "ebay",
+      "category": "wireless headphones"
+    },
+    {
+      "title": "Ebay Wireless Headphones - Model 4",
+      "price": 329.95,
+      "image": "https://placehold.co/400x400?text=ebay+4",
+      "url": "https://www.ebay.com/search?q=wireless+headphones",
+      "description": "Sample wireless headphones product from ebay",
+      "source": "ebay",
+      "category": "wireless headphones"
+    },
+    {
+      "title": "Ebay Wireless Headphones - Model 5",
+      "price": 362.9,
+      "image": "https://placehold.co/400x400?text=ebay+5",
+      "url": "https://www.ebay.com/search?q=wireless+headphones",
+      "description": "Sample wireless headphones product from ebay",
+      "source": "ebay",
+      "category": "wireless headphones"
+    }
+  ],
+  "count": 5,
+  "timestamp": "2025-10-17 02:46:59"
+}

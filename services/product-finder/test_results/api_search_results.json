@@ -1,0 +1,31 @@
+{
+  "products": [
+    {
+      "id": "-4140579467060693662",
+      "title": "Sony WH-CH520 Wireless Bluetooth Headphones with Microphone-Black",
+      "price": 39.88,
+      "currency": "USD",
+      "image_url": "https://i5.walmartimages.com/seo/Sony-WH-CH520-Wireless-Bluetooth-Headphones-with-Microphone-Black_2bf4c6c6-fe00-4c7d-a96c-7377c4d22468.5c9df151b25b3a1328a6ed171566c71c.jpeg?odnHeight=580&odnWidth=580&odnBg=FFFFFF",
+      "description": "Walmart product: Sony WH-CH520 Wireless Bluetooth Headphones with Microphone-Black",
+      "brand": null,
+      "category": "wireless headphones",
+      "rating": null,
+      "availability": "in_stock",
+      "url": "https://www.walmart.com/ip/Sony-WH-CH520-Wireless-Bluetooth-Headphones-with-Microphone-Black/2247478998?classType=VARIANT&athbdg=L1600&from=/search",
+      "source": "walmart"
+    }
+  ],
+  "total_results": 1,
+  "query": "wireless headphones",
+  "filters_applied": {
+    "category": "Electronics",
+    "min_price": 20.0,
+    "max_price": 200.0,
+    "brand": "Sony",
+    "sources": [
+      "amazon",
+      "ebay",
+      "walmart"
+    ]
+  }
+}

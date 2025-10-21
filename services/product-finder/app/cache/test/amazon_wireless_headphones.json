@@ -1,0 +1,61 @@
+{
+  "query": "wireless headphones",
+  "products": [
+    {
+      "source": "amazon",
+      "category": "wireless headphones",
+      "id": "B0FM2W9HXH",
+      "url": "https://www.amazon.com/dp/B0FM2W9HXH",
+      "title": "Wireless Earbuds, Sports Bluetooth Headphones, 80Hrs Playtime Ear Buds with LED Power Display, Noise Canceling Headset, IPX7 Waterproof Earphones for Workout/Running (Rose Gold)",
+      "price": 24.99,
+      "image": "https://m.media-amazon.com/images/I/61DzAvRWJlL._AC_UY218_.jpg",
+      "rating": 4.8,
+      "description": "Amazon product: Wireless Earbuds, Sports Bluetooth Headphones, 80Hrs Playtime Ear Buds with LED Power Display, Noise Canceling Headset, IPX7 Waterproof Earphones for Workout/Running (Rose Gold)"
+    },
+    {
+      "source": "amazon",
+      "category": "wireless headphones",
+      "id": "B0FJM19928",
+      "url": "https://www.amazon.com/dp/B0FJM19928",
+      "title": "Hybrid Active Noise Cancelling Bluetooth Headphones, Over Ear Wireless Headphones with 60H Playtime, Hi-Res Audio, Deep Bass, Memory Foam Ear Cups for Home Office Travel",
+      "price": 29.99,
+      "image": "https://m.media-amazon.com/images/I/61JYOW4SL5L._AC_UY218_.jpg",
+      "rating": 4.9,
+      "description": "Amazon product: Hybrid Active Noise Cancelling Bluetooth Headphones, Over Ear Wireless Headphones with 60H Playtime, Hi-Res Audio, Deep Bass, Memory Foam Ear Cups for Home Office Travel"
+    },
+    {
+      "source": "amazon",
+      "category": "wireless headphones",
+      "id": "B0FLZH4VJL",
+      "url": "https://www.amazon.com/dp/B0FLZH4VJL",
+      "title": "Bluetooth Headphones Over Ear,Wireless Headphones Low Latency, Hands-Free Calls, Noise Reduction Headphones Deep Bass, HiFi Stereo Foldable Headset for Sports Travel Cellphone Tablet Office",
+      "price": 12.99,
+      "image": "https://m.media-amazon.com/images/I/51DfeDWTOmL._AC_UY218_.jpg",
+      "description": "Amazon product: Bluetooth Headphones Over Ear,Wireless Headphones Low Latency, Hands-Free Calls, Noise Reduction Headphones Deep Bass, HiFi Stereo Foldable Headset for Sports Travel Cellphone Tablet Office"
+    },
+    {
+      "source": "amazon",
+      "category": "wireless headphones",
+      "id": "B0FJM1LJFV",
+      "url": "https://www.amazon.com/dp/B0FJM1LJFV",
+      "title": "Bluetooth Headphones, Wireless Over Ear Bluetooth Headsets with 35H Playtime, HiFi Stereo Foldable Headphones with Foam Ear Cups for Sports, Office, Travel",
+      "price": 19.99,
+      "image": "https://m.media-amazon.com/images/I/61O-+3HbvhL._AC_UY218_.jpg",
+      "rating": 5.0,
+      "description": "Amazon product: Bluetooth Headphones, Wireless Over Ear Bluetooth Headsets with 35H Playtime, HiFi Stereo Foldable Headphones with Foam Ear Cups for Sports, Office, Travel"
+    },
+    {
+      "source": "amazon",
+      "category": "wireless headphones",
+      "id": "B0FLYQJMR8",
+      "url": "https://www.amazon.com/dp/B0FLYQJMR8",
+      "title": "TAGRY Hybrid Active Noise Cancelling Headphones 100H Playtime Wireless Bluetooth Over Ear Headphone with Fast Charging Hi-Res Audio Comfort Earcups Headsets for Home Travel Office Phone PC Black",
+      "price": 49.99,
+      "image": "https://m.media-amazon.com/images/I/712EjjmLvhL._AC_UY218_.jpg",
+      "rating": 4.7,
+      "description": "Amazon product: TAGRY Hybrid Active Noise Cancelling Headphones 100H Playtime Wireless Bluetooth Over Ear Headphone with Fast Charging Hi-Res Audio Comfort Earcups Headsets for Home Travel Office Phone PC Black"
+    }
+  ],
+  "count": 5,
+  "timestamp": "2025-10-17 02:46:59"
+}

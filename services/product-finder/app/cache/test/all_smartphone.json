@@ -1,0 +1,66 @@
+{
+  "query": "smartphone",
+  "products": [
+    {
+      "title": "Ebay Smartphone - Model 1",
+      "price": 332.22,
+      "image": "https://placehold.co/400x400?text=ebay+1",
+      "url": "https://www.ebay.com/search?q=smartphone",
+      "description": "Sample smartphone product from ebay",
+      "source": "ebay",
+      "category": "smartphone"
+    },
+    {
+      "title": "Ebay Smartphone - Model 2",
+      "price": 309.96,
+      "image": "https://placehold.co/400x400?text=ebay+2",
+      "url": "https://www.ebay.com/search?q=smartphone",
+      "description": "Sample smartphone product from ebay",
+      "source": "ebay",
+      "category": "smartphone"
+    },
+    {
+      "title": "Ebay Smartphone - Model 3",
+      "price": 178.23,
+      "image": "https://placehold.co/400x400?text=ebay+3",
+      "url": "https://www.ebay.com/search?q=smartphone",
+      "description": "Sample smartphone product from ebay",
+      "source": "ebay",
+      "category": "smartphone"
+    },
+    {
+      "source": "amazon",
+      "category": "smartphone",
+      "id": "B0DLHNWHRF",
+      "url": "https://www.amazon.com/dp/B0DLHNWHRF",
+      "title": "Samsung Galaxy A16 5G A Series, Unlocked Android Smartphone, Large AMOLED Display, Durable Design, Super Fast Charging, Expandable Storage, 5G Connectivity, US Version, 2025, Blue Black",
+      "price": 164.99,
+      "image": "https://m.media-amazon.com/images/I/71KGkQ+KOKL._AC_UY218_.jpg",
+      "rating": 4.2,
+      "description": "Amazon product: Samsung Galaxy A16 5G A Series, Unlocked Android Smartphone, Large AMOLED Display, Durable Design, Super Fast Charging, Expandable Storage, 5G Connectivity, US Version, 2025, Blue Black"
+    },
+    {
+      "source": "amazon",
+      "category": "smartphone",
+      "id": "B0DP3G4GVQ",
+      "url": "https://www.amazon.com/dp/B0DP3G4GVQ",
+      "title": "SAMSUNG Galaxy S25 Ultra, 512GB Smartphone, Unlocked Android, AI Night Mode Camera, Snapdragon 8 Elite Fast Processor, 5000mAh Battery, Built-in S Pen, 2025, US 1 Yr Warranty, Titanium Black",
+      "price": 1350.53,
+      "image": "https://m.media-amazon.com/images/I/61n0lmxP5-L._AC_UY218_.jpg",
+      "rating": 4.5,
+      "description": "Amazon product: SAMSUNG Galaxy S25 Ultra, 512GB Smartphone, Unlocked Android, AI Night Mode Camera, Snapdragon 8 Elite Fast Processor, 5000mAh Battery, Built-in S Pen, 2025, US 1 Yr Warranty, Titanium Black"
+    },
+    {
+      "source": "amazon",
+      "category": "smartphone",
+      "id": "B0CP6DDN1H",
+      "url": "https://www.amazon.com/dp/B0CP6DDN1H",
+      "title": "Motorola Moto G Play | 2024 | Unlocked | Made for US 4/64GB | 50MP Camera | Sapphire Blue",
+      "image": "https://m.media-amazon.com/images/I/61xk4XNRktL._AC_UY218_.jpg",
+      "rating": 4.2,
+      "description": "Amazon product: Motorola Moto G Play | 2024 | Unlocked | Made for US 4/64GB | 50MP Camera | Sapphire Blue"
+    }
+  ],
+  "count": 6,
+  "timestamp": "2025-10-17 02:41:53"
+}
